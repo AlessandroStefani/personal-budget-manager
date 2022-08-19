@@ -1,4 +1,3 @@
-
 package main.model.profile;
 
 public class ProfileCredentials {

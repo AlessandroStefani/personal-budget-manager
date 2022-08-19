@@ -4,22 +4,15 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.google.common.base.Optional;
 
 import javafx.concurrent.Task;
-import javafx.scene.Scene;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.ChoiceDialog;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.stage.Popup;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 import main.control.investment.InvestmentViewObserver;
 import main.control.investment.InvestmentViewObserverimpl;
@@ -45,12 +38,13 @@ import main.model.profile.ProfileCredentials;
 import main.model.profile.ProfileEconomy;
 import main.model.profile.ProfileEconomyImpl;
 import main.model.profile.SimplePassword;
-import main.view.GUIFactory;
-import main.view.GUIFactoryImpl;
+import main.view.MainScene;
 import main.view.View;
-import main.view.profile.LoginScene;
+import main.view.investment.InvestmentScene;
+import main.view.profile.LoginView;
 import main.view.profile.PasswordChangeView;
 import main.view.profile.ProfilePage;
+import main.view.profile.RegistrationView;
 
 public class ControllerImpl implements Controller {
 
@@ -125,11 +119,17 @@ public class ControllerImpl implements Controller {
         profile.addHoldingAccount(hAcc2);
         profile.addInvestmentAccount(invAcc2);
 
-        this.views = List.of(Arrays.copyOf(views, views.length));
-        for (final var view : views) {
-            view.setObserver(this);
-            view.show(args);
+        this.views = new LinkedList<>();
+        for (int i = 0; i < views.length; i++) {
+            this.views.add(views[i]);
+            views[i].setObserver(this);
+            views[i].show(args);
         }
+//        for (final var view : views) {
+//            view.setObserver(this);
+//            view.setController(this);
+//            view.show(args);
+//        }
 
     }
 
@@ -195,12 +195,9 @@ public class ControllerImpl implements Controller {
     }
 
     @Override
-    public void updateMarketInfo() {
+    public Queue<List<?>> updateMarketInfo() {
         final InvestmentViewObserver ivo = new InvestmentViewObserverimpl(this.profile);
 
-        final Task<Queue<List<?>>> task = new Task<Queue<List<?>>>() {
-            @Override
-            public Queue<List<?>> call() {
                 final Queue<List<?>> queue = new LinkedList<>();
                 final List<String> symbols = ivo.getAllHoldingSymbols();
                 final List<Double> shares = ivo.getAllHoldingShares(symbols);
@@ -211,14 +208,6 @@ public class ControllerImpl implements Controller {
                 queue.add(ivo.getAllHoldingInValue(prices, shares));
                 queue.add(ivo.getAllInvAccountIDs());
                 return queue;
-            }
-        };
-
-        task.setOnSucceeded(e -> {
-            views.forEach(v -> v.marketUpdates(task.getValue()));
-        });
-        // new Thread(task).start();
-        executor.execute(task);
     }
 
     @Override
@@ -228,8 +217,8 @@ public class ControllerImpl implements Controller {
     }
 
     @Override
-    public void showProfile(final BorderPane root) {
-        new ProfilePage(root, this);
+    public void showProfile(final BorderPane root, final Stage stage) {
+        new ProfilePage(root, stage, this);
     }
 
     @Override
@@ -246,8 +235,8 @@ public class ControllerImpl implements Controller {
     }
 
     @Override
-    public void showLoginScene() {
-        // TODO Auto-generated method stub
+    public void showLoginView(final Stage stage) {
+        new LoginView(this, stage);
     }
 
     @Override
@@ -273,5 +262,25 @@ public class ControllerImpl implements Controller {
             changer = new PasswordChanger(new PasswordChangeByFC(this.profileCred));
             changer.changePassword(newPword, confPword, id);
         }
+    }
+
+    @Override
+    public ProfileEconomy getUsrEconomy() {
+        return this.profile;
+    }
+
+    @Override
+    public void showMainScene(final Stage stage) {
+        new MainScene(this, stage);
+    }
+
+    @Override
+    public void showRegistrationView(final Stage stage) {
+        new RegistrationView(this, stage);
+    }
+
+    @Override
+    public void showInvestmentPage(final BorderPane root) {
+        new InvestmentScene(root, this);
     }
 }

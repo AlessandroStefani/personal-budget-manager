@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
+import main.util.Pair;
 
 /**
  * This interface models various GUI components in javafx being used
@@ -95,4 +96,19 @@ public interface GUIFactory {
      */
     ScrollPane createBlockScheda(Node title, Collection<? extends Node> descriptions,
             Collection<? extends Node>... fields);
+
+    /**
+     * Able to create a Pane with a title at the top and a list of pairs of objects
+     * transformed to text beneath it.
+     * An example would be a legend.
+     * 
+     * @param <X> first item of the pair
+     * @param <Y> second item of the pair
+     * @param title
+     * @param titleFontSize
+     * @param list list of pairs to be transformed into text
+     * @param listFontSize
+     * @return a Pane with a title and a list of objects transformed to text under it
+     */
+    <X, Y> Pane createVerticalList(String title, int titleFontSize, List<Pair<X, Y>> list, int listFontSize);
 }

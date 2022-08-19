@@ -18,17 +18,14 @@ public class RegistrationView {
     private static final int H_RATIO = 3;
 
     private final BorderPane root;
-    private GUIFactory guiFactory;
-    private final Controller controller;
 
-    public RegistrationView(final Stage primaryStage, final Scene mainScene, final Controller controller) {
+    public RegistrationView(final Controller controller, final Stage stage) {
         final GUIFactoryImpl.Builder b = new GUIFactoryImpl.Builder(Screen.getPrimary().getBounds().getWidth(),
                 Screen.getPrimary().getBounds().getHeight());
-        this.guiFactory = b.build();
+        final GUIFactory guiFactory = b.build();
 
-        this.controller = controller;
         this.root = new BorderPane();
-        final Pane textFieldLayout = this.guiFactory.createVerticalPanel();
+        final Pane textFieldLayout = guiFactory.createVerticalPanel();
 
         final TextField name = new TextField();
         name.setPromptText("nome");
@@ -43,30 +40,35 @@ public class RegistrationView {
         final TextField confPass = new PasswordField();
         confPass.setPromptText("conferma password");
 
-        final Pane buttonLayout = this.guiFactory.createHorizontalPanel();
-        final Button register = this.guiFactory.createButton("Registrati");
+        final Pane buttonLayout = guiFactory.createHorizontalPanel();
+        final Button register = guiFactory.createButton("Registrati");
         register.setOnAction(e -> {
             if (checkInputs(eMail.getText(), password.getText(), confPass.getText())) {
                 controller.registerProfile(name.getText(), surname.getText(), fc.getText(), eMail.getText(), password.getText());
-                primaryStage.setScene(mainScene);
-                primaryStage.centerOnScreen();
+                controller.showMainScene(stage);
             } else {
-                guiFactory.createInformationBox("Email non valida o Password incorretta").showAndWait();
-                e.consume();
+                guiFactory.createInformationBox("Email non valida o Password non coincidenti").showAndWait();
             }
         });
+        final Button login = guiFactory.createButton("Accedi");
+        login.setOnAction(e -> {
+            controller.showLoginView(stage);
+        });
 
-        buttonLayout.getChildren().addAll(register);
+        buttonLayout.getChildren().addAll(register, login);
         textFieldLayout.getChildren().addAll(name, surname, fc, eMail, password, confPass);
         this.root.setBottom(buttonLayout);
         this.root.setCenter(textFieldLayout);
+        stage.setScene(getScene());
+        stage.centerOnScreen();
+        stage.show();
     }
 
     private boolean checkInputs(final String eMail, final String password, final String confPass) {
         return eMail.contains("@") && password.equals(confPass);
     }
 
-    public Scene getScene() {
+    private Scene getScene() {
         return new Scene(this.root, Screen.getPrimary().getBounds().getWidth() / W_RATIO, Screen.getPrimary().getBounds().getHeight() / H_RATIO);
     }
 }

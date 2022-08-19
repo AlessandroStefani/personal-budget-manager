@@ -18,12 +18,15 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import main.control.Controller;
 import main.util.AutoCompleteTextField;
 import main.view.BaseScene;
+import main.view.GUIFactory;
+import main.view.GUIFactoryImpl;
 
-public class InvestmentScene extends BaseScene {
+public class InvestmentScene {
 
     private static final String BUY = "Buy";
     private static final String SELL = "Sell";
@@ -42,33 +45,37 @@ public class InvestmentScene extends BaseScene {
     private final BorderPane root;
     private Queue<List<?>> updateables;
     private final ObservableList<String> accountBox;
-    private final Pane menuBar;
-    private final Scene scene;
     private final AutoCompleteTextField symbolName;
     private final ComboBox<String> accountComboBox;
+    private final Controller controller;
+    private final GUIFactory guiFactory;
 
-    public InvestmentScene(final Scene mainScene, final Stage primaryStage, final Pane menuBar,
-            final double screenWidth, final double screenHeight, final Controller controller) {
-        super(mainScene, primaryStage, screenWidth, screenHeight, controller);
+    public InvestmentScene(final BorderPane root, final Controller controller) {
+        final GUIFactoryImpl.Builder b = new GUIFactoryImpl.Builder(Screen.getPrimary().getBounds().getWidth(),
+                Screen.getPrimary().getBounds().getHeight());
+        this.guiFactory = b.build();
+
         desc = new ArrayList<>();
         desc.add(SYMBOL);
         desc.add(PRICE);
         desc.add(SHARE);
         desc.add(VALUE);
-        root = new BorderPane();
-        scene = getGadgets().createScene(root);
-        this.menuBar = menuBar;
+
+        this.root = root;
+        this.controller = controller;
         this.accountBox = FXCollections.observableArrayList();
-        accountComboBox = new ComboBox<>(accountBox);
-        symbolName = new AutoCompleteTextField();
+        this.accountComboBox = new ComboBox<>(accountBox);
+        this.symbolName = new AutoCompleteTextField();
+        setMarketHoldings();
+        createContentDisplay();
         createMenu();
     }
 
     // interface and functionalities
     @SuppressWarnings("unchecked")
     private void createMenu() {
-        final Pane bottomBar = getGadgets().createHorizontalPanel();
-        final Button buy = getGadgets().createButton(BUY), sell = getGadgets().createButton(SELL);
+        final Pane bottomBar = this.guiFactory.createHorizontalPanel();
+        final Button buy = this.guiFactory.createButton(BUY), sell = this.guiFactory.createButton(SELL);
         final TextField numberShare = new TextField("1.0");
 
         symbolName.setPromptText("symbol name");
@@ -86,65 +93,54 @@ public class InvestmentScene extends BaseScene {
             }
         });
 
-        symbolName.setTextFormatter(new TextFormatter<>((change) -> {
+        this.symbolName.setTextFormatter(new TextFormatter<>((change) -> {
             change.setText(change.getText().toUpperCase());
             return change;
         }));
 
         buy.setOnAction(e -> {
-            getController().buyStocks(symbolName.getText(), Double.parseDouble(numberShare.getText()),
+            this.controller.buyStocks(this.symbolName.getText(), Double.parseDouble(numberShare.getText()),
                     accountComboBox.getValue());
         });
 
         sell.setOnAction(e -> {
-            getController().sellStocks(symbolName.getText(), Double.parseDouble(numberShare.getText()),
-                    accountComboBox.getValue());
+            this.controller.sellStocks(this.symbolName.getText(), Double.parseDouble(numberShare.getText()),
+                    this.accountComboBox.getValue());
         });
 
-        bottomBar.getChildren().addAll(accountComboBox, symbolName, numberShare, buy, sell);
+        bottomBar.getChildren().addAll(this.accountComboBox, this.symbolName, numberShare, buy, sell);
 
-        root.setTop(this.menuBar);
-        root.setBottom(bottomBar);
+        this.root.setBottom(bottomBar);
     }
 
     // content display that are updateble
     @SuppressWarnings("unchecked")
     private void createContentDisplay() {
-        final Iterator<List<?>> iter = updateables.iterator();
+        final Iterator<List<?>> iter = this.updateables.iterator();
         final List<String> symbols = (List<String>) iter.next();
 
         // maybe createScheda should have been built differently, but since it's for
         // GUI, not computational model,
         // I think a bit redundancy can't be avoided without losing flexibility;
-        final Node n = getGadgets().createBlockScheda(getGadgets().createText(STOCKTITLE, TITLEFONTSIZE),
-                getGadgets().transformStringIntoText(desc, HEADERFONTSIZE),
-                getGadgets().transformStringIntoText(symbols, TEXTFONTSIZE),
-                getGadgets().transformStringIntoText(iter.next(), TEXTFONTSIZE),
-                getGadgets().transformStringIntoText(iter.next(), TEXTFONTSIZE),
-                getGadgets().transformStringIntoText(iter.next(), TEXTFONTSIZE));
-        accountBox.clear();
-        accountBox.addAll((Collection<? extends String>) iter.next());
-        accountComboBox.getSelectionModel().selectFirst();
-        symbolName.getEntries().clear();
-        symbolName.getEntries().addAll(symbols);
+        final Node n = this.guiFactory.createBlockScheda(this.guiFactory.createText(STOCKTITLE, TITLEFONTSIZE),
+                this.guiFactory.transformStringIntoText(this.desc, HEADERFONTSIZE),
+                this.guiFactory.transformStringIntoText(symbols, TEXTFONTSIZE),
+                this.guiFactory.transformStringIntoText(iter.next(), TEXTFONTSIZE),
+                this.guiFactory.transformStringIntoText(iter.next(), TEXTFONTSIZE),
+                this.guiFactory.transformStringIntoText(iter.next(), TEXTFONTSIZE));
+        this.accountBox.clear();
+        this.accountBox.addAll((Collection<? extends String>) iter.next());
+        this.accountComboBox.getSelectionModel().selectFirst();
+        this.symbolName.getEntries().clear();
+        this.symbolName.getEntries().addAll(symbols);
 
-        root.setCenter(n);
+        this.root.setLeft(this.guiFactory.createHorizontalPanel());
+        this.root.setRight(this.guiFactory.createHorizontalPanel());
+        this.root.setCenter(n);
     }
 
-    public void setMarketHoldings(final Queue<List<?>> updates) {
-        this.updateables = updates;
-    }
-
-    @Override
-    public Scene getScene() {
-        createContentDisplay();
-        return scene;
-    }
-
-    @Override
-    public void updateEverythingNeeded(final Queue<List<?>> updates) {
-        setMarketHoldings(updates);
-        createMenu();
+    private void setMarketHoldings() {
+        this.updateables = this.controller.updateMarketInfo();
     }
 
 }
